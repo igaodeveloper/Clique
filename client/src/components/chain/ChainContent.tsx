@@ -2,12 +2,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersona } from "@/hooks/usePersona";
+import { useWebSocket } from "@/context/WebSocketContext";
 import { formatTimeAgo, getInitials, getPersonaIndicatorColor } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
+import TypingIndicator from "./TypingIndicator";
 
 interface ChainContentProps {
   chain: any;
@@ -20,9 +22,49 @@ const ChainContent = ({ chain, className = "" }: ChainContentProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isAddingContent, setIsAddingContent] = useState(false);
+  const { sendTypingStatus, joinClique } = useWebSocket();
   const [newContent, setNewContent] = useState("");
   const [contentType, setContentType] = useState<string>("text");
   const [mediaUrl, setMediaUrl] = useState<string>("");
+  const [isTyping, setIsTyping] = useState(false);
+  
+  // Join Clique WebSocket when component mounts
+  useEffect(() => {
+    if (chain && chain.cliqueId) {
+      joinClique(chain.cliqueId);
+    }
+  }, [chain?.cliqueId, joinClique]);
+  
+  // Typing indicator with debounce
+  useEffect(() => {
+    if (!chain) return;
+    
+    // Don't send typing status if not adding content
+    if (!isAddingContent) return;
+    
+    const typingTimeout = setTimeout(() => {
+      // If was typing but stopped, update status
+      if (isTyping && newContent.length === 0) {
+        setIsTyping(false);
+        sendTypingStatus(chain.id, false);
+      }
+      // If typing new content, update status
+      else if (newContent.length > 0 && !isTyping) {
+        setIsTyping(true);
+        sendTypingStatus(chain.id, true);
+      }
+    }, 500);
+    
+    return () => clearTimeout(typingTimeout);
+  }, [newContent, chain, isTyping, isAddingContent, sendTypingStatus]);
+  
+  // Clear typing status when unmounting or closing the form
+  useEffect(() => {
+    if (!isAddingContent && isTyping && chain) {
+      setIsTyping(false);
+      sendTypingStatus(chain.id, false);
+    }
+  }, [isAddingContent, chain, isTyping, sendTypingStatus]);
 
   if (!chain || !chain.contents?.length) return null;
   
@@ -418,31 +460,36 @@ const ChainContent = ({ chain, className = "" }: ChainContentProps) => {
       </div>
       
       {/* Chain Actions */}
-      <div className="flex items-center justify-between p-4 bg-gray-50 border-t border-gray-100">
-        <div className="flex items-center space-x-4">
-          <button 
-            className={`flex items-center ${hasUserReacted ? 'text-primary-600' : 'text-gray-600 hover:text-primary-600'}`}
-            onClick={handleToggleReaction}
-            disabled={addReactionMutation.isPending || removeReactionMutation.isPending}
-          >
-            <i className={`${hasUserReacted ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
-            <span className="ml-1 text-sm font-medium">{reactionsCount}</span>
-          </button>
-          <button className="flex items-center text-gray-600 hover:text-primary-600">
-            <i className="ri-chat-1-line text-xl"></i>
-            <span className="ml-1 text-sm font-medium">{commentsCount}</span>
-          </button>
-        </div>
+      <div className="p-4 bg-gray-50 border-t border-gray-100">
+        {/* Typing indicator */}
+        <TypingIndicator chainId={chain.id} className="mb-2" />
         
-        <Button
-          variant={isAddingContent ? "default" : "outline"}
-          size="sm"
-          className={isAddingContent ? "bg-primary-600" : "text-primary-600 bg-primary-50 hover:bg-primary-100"}
-          onClick={() => setIsAddingContent(!isAddingContent)}
-        >
-          <i className={`${isAddingContent ? 'ri-close-line' : 'ri-add-line'} mr-1`}></i>
-          {isAddingContent ? "Cancelar" : "Continuar Cadeia"}
-        </Button>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <button 
+              className={`flex items-center ${hasUserReacted ? 'text-primary-600' : 'text-gray-600 hover:text-primary-600'}`}
+              onClick={handleToggleReaction}
+              disabled={addReactionMutation.isPending || removeReactionMutation.isPending}
+            >
+              <i className={`${hasUserReacted ? 'ri-heart-fill' : 'ri-heart-line'} text-xl`}></i>
+              <span className="ml-1 text-sm font-medium">{reactionsCount}</span>
+            </button>
+            <button className="flex items-center text-gray-600 hover:text-primary-600">
+              <i className="ri-chat-1-line text-xl"></i>
+              <span className="ml-1 text-sm font-medium">{commentsCount}</span>
+            </button>
+          </div>
+          
+          <Button
+            variant={isAddingContent ? "default" : "outline"}
+            size="sm"
+            className={isAddingContent ? "bg-primary-600" : "text-primary-600 bg-primary-50 hover:bg-primary-100"}
+            onClick={() => setIsAddingContent(!isAddingContent)}
+          >
+            <i className={`${isAddingContent ? 'ri-close-line' : 'ri-add-line'} mr-1`}></i>
+            {isAddingContent ? "Cancelar" : "Continuar Cadeia"}
+          </Button>
+        </div>
       </div>
     </div>
   );

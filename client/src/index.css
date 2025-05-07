@@ -133,3 +133,21 @@
 .persona-active {
   animation: personaFade 0.3s ease-out forwards;
 }
+
+/* Animation for typing indicator */
+@keyframes typingPing {
+  0% { transform: scale(1); opacity: 1; }
+  75%, 100% { transform: scale(2); opacity: 0; }
+}
+
+.typing-dot {
+  animation: typingPing 1.4s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+}

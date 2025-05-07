@@ -5,13 +5,16 @@ import App from "./App";
 import "./index.css";
 import { AuthProvider } from "./context/AuthContext";
 import { PersonaProvider } from "./context/PersonaContext";
+import { WebSocketProvider } from "./context/WebSocketContext";
 
 createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <PersonaProvider>
-        <App />
-      </PersonaProvider>
+      <WebSocketProvider>
+        <PersonaProvider>
+          <App />
+        </PersonaProvider>
+      </WebSocketProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
