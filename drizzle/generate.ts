@@ -1,5 +1,8 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { sql } from 'drizzle-orm';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { generateMigration } from 'drizzle-kit';
 import postgres from 'postgres';
 import * as schema from '../shared/schema';
 import { resolve } from 'path';
@@ -21,9 +24,16 @@ async function main() {
     console.log(`📁 Pasta de migrações: ${migrationsFolder}`);
     console.log('📝 Gerando arquivos de migração...');
     
-    await migrate(db, { migrationsFolder });
+    // Gerar SQL para criação do schema
+    const result = await generateMigration({
+      db, 
+      schema, 
+      out: migrationsFolder,
+      migrationsFolder: migrationsFolder,
+      breakpoints: false
+    });
     
-    console.log('✅ Migração gerada com sucesso!');
+    console.log('✅ Migração gerada com sucesso!', result);
   } catch (error) {
     console.error('❌ Erro durante geração de migração:', error);
     process.exit(1);

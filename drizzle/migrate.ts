@@ -1,7 +1,7 @@
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '@shared/schema';
+import * as schema from '../shared/schema';
 
 async function runMigrations() {
   console.log('🔄 Iniciando migração do banco de dados...');
