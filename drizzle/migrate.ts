@@ -20,7 +20,7 @@ async function runMigrations() {
     // Executar migração
     console.log('🛠️ Aplicando migrações...');
     
-    await migrate(db, { migrationsFolder: 'drizzle/migrations' });
+    await migrate(db, { migrationsFolder: 'migrations' });
     
     console.log('✅ Migrações aplicadas com sucesso!');
   } catch (error) {

@@ -16,7 +16,7 @@ async function main() {
   
   try {
     // Gerar migrações
-    const migrationsFolder = resolve('./drizzle/migrations');
+    const migrationsFolder = resolve('./migrations');
     
     console.log(`📁 Pasta de migrações: ${migrationsFolder}`);
     console.log('📝 Gerando arquivos de migração...');
