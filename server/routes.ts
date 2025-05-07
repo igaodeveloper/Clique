@@ -13,7 +13,8 @@ import {
   insertReputationSchema,
   User,
   Chain,
-  ChainContent
+  ChainContent,
+  userSchema
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import expressSession from "express-session";
@@ -64,21 +65,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) return done(null, false, { message: "Incorrect password" });
       
-      return done(null, user);
+      // Validate e garante que os valores são do tipo correto
+      const validUser = userSchema.parse(user);
+      return done(null, validUser);
     } catch (err) {
+      console.error("Authentication error:", err);
       return done(err);
     }
   }));
 
-  passport.serializeUser((user: any, done) => {
+  passport.serializeUser((user: User, done) => {
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
-      done(null, user);
+      if (!user) {
+        return done(null, false);
+      }
+      
+      // Validar usuário através do schema Zod
+      const validUser = userSchema.parse(user);
+      done(null, validUser);
     } catch (err) {
+      console.error("Deserialize error:", err);
       done(err, null);
     }
   });
@@ -650,14 +661,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Importar estados do WebSocket
+  const WebSocketOpenState = WebSocket.OPEN;
+
   // Helper function to broadcast to users
   const broadcastToUsers = (userIds: number[], data: any) => {
     userIds.forEach(userId => {
       const clients = clientsByUser.get(userId);
       if (clients) {
         clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            client.send(JSON.stringify(data));
+          if (client.readyState === WebSocketOpenState) {
+            try {
+              client.send(JSON.stringify(data));
+            } catch (error) {
+              console.error('Error sending message to user:', error);
+            }
           }
         });
       }
@@ -669,8 +687,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const clients = clientsByClique.get(cliqueId);
     if (clients) {
       clients.forEach(client => {
-        if (client !== excludeClient && client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(data));
+        if (client !== excludeClient && client.readyState === WebSocketOpenState) {
+          try {
+            client.send(JSON.stringify(data));
+          } catch (error) {
+            console.error('Error broadcasting to clique:', error);
+          }
         }
       });
     }

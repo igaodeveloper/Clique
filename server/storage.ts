@@ -167,7 +167,16 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const now = new Date();
-    const user: User = { ...insertUser, id, createdAt: now };
+    
+    // Garantir que bio e avatarUrl são null e não undefined
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      createdAt: now,
+      bio: insertUser.bio || null,
+      avatarUrl: insertUser.avatarUrl || null
+    };
+    
     this.users.set(id, user);
     
     // Create a default persona for the user
@@ -175,7 +184,7 @@ export class MemStorage implements IStorage {
       userId: id,
       name: `${insertUser.displayName} Padrão`,
       bio: "Versão completa para todos os Cliques",
-      avatarUrl: insertUser.avatarUrl,
+      avatarUrl: insertUser.avatarUrl || null,
       isDefault: true,
     };
     await this.createPersona(defaultPersona);
@@ -187,16 +196,26 @@ export class MemStorage implements IStorage {
   async createPersona(insertPersona: InsertPersona): Promise<Persona> {
     const id = this.personaIdCounter++;
     const now = new Date();
-    const persona: Persona = { ...insertPersona, id, createdAt: now };
+    
+    // Garantir que os campos opcionais são null e não undefined
+    const persona: Persona = { 
+      ...insertPersona, 
+      id, 
+      createdAt: now,
+      bio: insertPersona.bio || null,
+      avatarUrl: insertPersona.avatarUrl || null,
+      isDefault: insertPersona.isDefault ?? false
+    };
     
     // If this is a default persona, ensure no other persona for this user is default
     if (persona.isDefault) {
-      for (const [, existingPersona] of this.personas) {
+      // Usar Array.from para iterar o Map de forma segura
+      Array.from(this.personas.entries()).forEach(([personaId, existingPersona]) => {
         if (existingPersona.userId === persona.userId && existingPersona.isDefault) {
           existingPersona.isDefault = false;
-          this.personas.set(existingPersona.id, existingPersona);
+          this.personas.set(personaId, existingPersona);
         }
-      }
+      });
     }
     
     this.personas.set(id, persona);
@@ -221,12 +240,13 @@ export class MemStorage implements IStorage {
     
     // If making this persona default, update other personas
     if (data.isDefault) {
-      for (const [, existingPersona] of this.personas) {
+      // Usar Array.from para iterar sobre o Map de forma segura
+      Array.from(this.personas.entries()).forEach(([personaId, existingPersona]) => {
         if (existingPersona.userId === persona.userId && existingPersona.id !== id && existingPersona.isDefault) {
           existingPersona.isDefault = false;
-          this.personas.set(existingPersona.id, existingPersona);
+          this.personas.set(personaId, existingPersona);
         }
-      }
+      });
     }
     
     this.personas.set(id, updatedPersona);
@@ -251,20 +271,28 @@ export class MemStorage implements IStorage {
   async createClique(insertClique: InsertClique): Promise<Clique> {
     const id = this.cliqueIdCounter++;
     const now = new Date();
+    
+    // Garantir que campos opcionais são null e não undefined
     const clique: Clique = { 
       ...insertClique, 
       id, 
       createdAt: now, 
-      memberCount: 1
+      memberCount: 1,
+      description: insertClique.description || null,
+      coverImageUrl: insertClique.coverImageUrl || null,
+      category: insertClique.category || null,
+      isPrivate: insertClique.isPrivate ?? false
     };
+    
     this.cliques.set(id, clique);
     
     // Add creator as a member
+    const defaultPersona = await this.getDefaultPersona(insertClique.creatorId);
     await this.addUserToClique({
       cliqueId: id,
       userId: insertClique.creatorId,
       role: "admin",
-      personaId: (await this.getDefaultPersona(insertClique.creatorId))?.id,
+      personaId: defaultPersona?.id || null,
     });
     
     return clique;
@@ -325,7 +353,16 @@ export class MemStorage implements IStorage {
   async addUserToClique(insertMember: InsertCliqueMember): Promise<CliqueMember> {
     const id = this.cliqueMemberIdCounter++;
     const now = new Date();
-    const member: CliqueMember = { ...insertMember, id, joinedAt: now };
+    
+    // Garantir que os campos opcionais são null ou definidos, não undefined
+    const member: CliqueMember = { 
+      ...insertMember, 
+      id, 
+      joinedAt: now,
+      personaId: insertMember.personaId || null,
+      role: insertMember.role || "member"
+    };
+    
     this.cliqueMembers.set(id, member);
     
     // Update clique member count
@@ -362,7 +399,17 @@ export class MemStorage implements IStorage {
   async createChain(insertChain: InsertChain): Promise<Chain> {
     const id = this.chainIdCounter++;
     const now = new Date();
-    const chain: Chain = { ...insertChain, id, createdAt: now, updatedAt: now };
+    
+    // Garantir que campos opcionais são null e não undefined
+    const chain: Chain = { 
+      ...insertChain, 
+      id, 
+      createdAt: now, 
+      updatedAt: now,
+      personaId: insertChain.personaId || null,
+      title: insertChain.title || null
+    };
+    
     this.chains.set(id, chain);
     return chain;
   }
@@ -407,7 +454,17 @@ export class MemStorage implements IStorage {
   async addContentToChain(insertContent: InsertChainContent): Promise<ChainContent> {
     const id = this.chainContentIdCounter++;
     const now = new Date();
-    const content: ChainContent = { ...insertContent, id, createdAt: now };
+    
+    // Garantir que campos opcionais são null e não undefined
+    const content: ChainContent = { 
+      ...insertContent, 
+      id, 
+      createdAt: now,
+      personaId: insertContent.personaId || null,
+      content: insertContent.content || null,
+      mediaUrl: insertContent.mediaUrl || null
+    };
+    
     this.chainContents.set(id, content);
     
     // Update chain's updatedAt
