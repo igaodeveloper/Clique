@@ -14,6 +14,18 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Define o comportamento do Zod para os campos opcionais - serão convertidos para null quando undefined
+export const userSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  password: z.string(),
+  email: z.string(),
+  displayName: z.string(),
+  bio: z.string().nullable(),
+  avatarUrl: z.string().nullable(),
+  createdAt: z.date()
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -24,7 +36,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+// Use o schema Zod para garantir que os campos opcionais são tratados como null e não undefined
+export type User = z.infer<typeof userSchema>;
 
 // Persona Model
 export const personas = pgTable("personas", {
