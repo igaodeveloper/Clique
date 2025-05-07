@@ -61,8 +61,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setUser(userData);
   };
 
-  const logout = () => {
-    setUser(null);
+  const logout = async () => {
+    try {
+      const response = await apiRequest("POST", "/api/auth/logout");
+      if (response.ok) {
+        setUser(null);
+      } else {
+        console.error("Logout failed:", await response.text());
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const updateUser = (userData: Partial<User>) => {

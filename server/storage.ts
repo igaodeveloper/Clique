@@ -107,7 +107,8 @@ export class MemStorage implements IStorage {
     const demoUser: InsertUser = {
       username: "demo",
       email: "demo@example.com",
-      password: "$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa", // password123
+      // Certifique-se de que esta é a senha hash correta para 'password123'
+      password: "$2a$10$jAo7cHxqsH9OT4TFxoJCX.YDhYNYZAxaBjlZ0i3tM0pAhESLRwIwG", // password123
       displayName: "Demo User",
       bio: "Este é um usuário de demonstração para testes"
     };
@@ -119,18 +120,15 @@ export class MemStorage implements IStorage {
         description: "Este é um clique criado para demonstrar a funcionalidade do aplicativo",
         isPrivate: false,
         category: "Demo",
-        tags: ["demo", "teste", "exemplo"],
         creatorId: user.id,
         coverImageUrl: ""
       }).then(clique => {
         // Create a demo chain in the clique
         this.createChain({
           title: "Como usar o CliqueChain",
-          description: "Um guia para iniciantes no CliqueChain",
           cliqueId: clique.id,
           creatorId: user.id,
-          personaId: null,
-          tags: ["tutorial", "guia"]
+          personaId: null
         }).then(chain => {
           // Add content to the chain
           this.addContentToChain({
@@ -519,7 +517,16 @@ export class MemStorage implements IStorage {
   async addReputation(insertReputation: InsertReputation): Promise<Reputation> {
     const id = this.reputationIdCounter++;
     const now = new Date();
-    const reputation: Reputation = { ...insertReputation, id, earnedAt: now };
+    
+    // Garantir que campos opcionais são null e não undefined
+    const reputation: Reputation = { 
+      ...insertReputation, 
+      id, 
+      earnedAt: now,
+      cliqueId: insertReputation.cliqueId || null,
+      level: insertReputation.level || 1
+    };
+    
     this.reputations.set(id, reputation);
     return reputation;
   }
