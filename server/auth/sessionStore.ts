@@ -1,17 +1,25 @@
-import { Store } from 'express-session';
-import connectPgSimple from 'connect-pg-simple';
+import connectPg from 'connect-pg-simple';
 import { pool } from '../db';
 
-// Criar instância do Store PostgreSQL para sessões
+/**
+ * Cria uma instância de store de sessão no PostgreSQL
+ * 
+ * @param session Módulo express-session
+ * @returns Instância do store de sessão
+ */
 export const createSessionStore = (session: any) => {
-  const PostgresStore = connectPgSimple(session);
+  console.log('Criando store de sessão no PostgreSQL');
   
-  // Inicializar armazenamento de sessão
-  return new PostgresStore({
+  // Criar a tabela de sessões se não existir
+  const PgStore = connectPg(session);
+  
+  const sessionStore = new PgStore({ 
     pool,
-    tableName: 'sessions', // Nome da tabela de sessões
-    createTableIfMissing: true, // Criar tabela se não existir
-    schemaName: 'public', // Esquema do PostgreSQL
-    pruneSessionInterval: 60 * 15, // Limpar sessões expiradas a cada 15 minutos
+    tableName: 'sessions',
+    createTableIfMissing: true 
   });
+  
+  console.log('Store de sessão criado com sucesso');
+  
+  return sessionStore;
 };

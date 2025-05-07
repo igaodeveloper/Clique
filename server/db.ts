@@ -1,49 +1,50 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+import ws from 'ws';
+import * as schema from '@shared/schema';
 
-// Configurar WebSockets para conexão Neon
-neonConfig.webSocketConstructor = ws;
+// Configurar WebSocket para Neon DB
+global.WebSocket = ws as any;
 
-// Verificar se DATABASE_URL está definido
+// Verificar se a URL do banco de dados está definida
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL deve ser definido. Você esqueceu de provisionar um banco de dados?"
-  );
+  throw new Error('DATABASE_URL não está definida');
 }
+
+console.log('Inicializando conexão com o banco de dados PostgreSQL');
 
 // Criar pool de conexões
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // máximo de conexões
-  idleTimeoutMillis: 30000, // tempo limite para conexões ociosas
-  connectionTimeoutMillis: 5000 // tempo limite para tentativas de conexão
+  connectionString: process.env.DATABASE_URL 
 });
 
-// Instância do Drizzle ORM
+// Criar cliente Drizzle ORM
 export const db = drizzle(pool, { schema });
 
-// Função para testar a conexão com o banco
+/**
+ * Testa a conexão com o banco de dados
+ * @returns Promise<boolean> True se a conexão foi bem-sucedida
+ */
 export async function testConnection() {
   try {
     const result = await pool.query('SELECT NOW()');
-    console.log('Conexão com o banco de dados bem-sucedida:', result.rows[0]);
+    console.log('Conexão com PostgreSQL bem-sucedida:', result.rows[0]);
     return true;
   } catch (error) {
-    console.error('Erro ao conectar ao banco de dados:', error);
-    return false;
+    console.error('Erro ao conectar ao PostgreSQL:', error);
+    throw error;
   }
 }
 
-// Função para encerrar a conexão com o pool
+/**
+ * Fecha o pool de conexões
+ */
 export async function closePool() {
-  await pool.end();
+  try {
+    await pool.end();
+    console.log('Pool de conexões encerrado');
+  } catch (error) {
+    console.error('Erro ao encerrar pool de conexões:', error);
+    throw error;
+  }
 }
-
-// Registrar manipulador para encerrar conexões ao finalizar o processo
-process.on('SIGINT', async () => {
-  console.log('Fechando conexões com o banco de dados...');
-  await closePool();
-  process.exit(0);
-});
