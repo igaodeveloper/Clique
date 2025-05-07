@@ -1,5 +1,6 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { 
   insertUserSchema, 
@@ -9,7 +10,10 @@ import {
   insertChainSchema,
   insertChainContentSchema,
   insertReactionSchema,
-  insertReputationSchema
+  insertReputationSchema,
+  User,
+  Chain,
+  ChainContent
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import expressSession from "express-session";
@@ -486,6 +490,267 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(reputations);
   });
 
+  // Set up HTTP server
   const httpServer = createServer(app);
+  
+  // WebSocket server setup
+  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  
+  // Track active connections by user and clique
+  const clientsByUser = new Map<number, WebSocket[]>();
+  const clientsByClique = new Map<number, WebSocket[]>();
+  
+  wss.on('connection', (ws) => {
+    // Handle connections
+    let userId: number | null = null;
+    let cliqueId: number | null = null;
+    
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        if (data.type === 'authenticate') {
+          // Authenticate the websocket connection
+          userId = data.userId;
+          
+          // Add to user clients
+          if (userId) {
+            if (!clientsByUser.has(userId)) {
+              clientsByUser.set(userId, []);
+            }
+            clientsByUser.get(userId)!.push(ws);
+          }
+          
+          // Send confirmation
+          ws.send(JSON.stringify({ 
+            type: 'authenticated', 
+            userId 
+          }));
+        }
+        else if (data.type === 'joinClique') {
+          // Join a clique's real-time updates
+          if (!userId) {
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Not authenticated' 
+            }));
+            return;
+          }
+          
+          cliqueId = data.cliqueId;
+          
+          // Verify user is member of clique
+          const isMember = await storage.isUserMemberOfClique(userId, cliqueId);
+          if (!isMember) {
+            ws.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Not a member of this clique' 
+            }));
+            return;
+          }
+          
+          // Add to clique clients
+          if (!clientsByClique.has(cliqueId)) {
+            clientsByClique.set(cliqueId, []);
+          }
+          clientsByClique.get(cliqueId)!.push(ws);
+          
+          // Send confirmation
+          ws.send(JSON.stringify({ 
+            type: 'joinedClique', 
+            cliqueId 
+          }));
+          
+          // Notify clique members that user is online
+          const user = await storage.getUser(userId);
+          if (user) {
+            broadcastToClique(cliqueId, {
+              type: 'userOnline',
+              user: { 
+                id: user.id,
+                username: user.username,
+                displayName: user.displayName,
+                avatarUrl: user.avatarUrl
+              }
+            }, ws);
+          }
+        }
+        else if (data.type === 'typing') {
+          // User is typing in a chain
+          if (!userId || !cliqueId) return;
+          
+          // Broadcast typing status to clique
+          broadcastToClique(cliqueId, {
+            type: 'userTyping',
+            userId,
+            chainId: data.chainId,
+            isTyping: data.isTyping
+          }, ws);
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+    
+    ws.on('close', () => {
+      // Remove from user clients
+      if (userId) {
+        const userClients = clientsByUser.get(userId);
+        if (userClients) {
+          const index = userClients.indexOf(ws);
+          if (index !== -1) {
+            userClients.splice(index, 1);
+          }
+          if (userClients.length === 0) {
+            clientsByUser.delete(userId);
+          }
+        }
+      }
+      
+      // Remove from clique clients
+      if (cliqueId) {
+        const cliqueClients = clientsByClique.get(cliqueId);
+        if (cliqueClients) {
+          const index = cliqueClients.indexOf(ws);
+          if (index !== -1) {
+            cliqueClients.splice(index, 1);
+          }
+          if (cliqueClients.length === 0) {
+            clientsByClique.delete(cliqueId);
+          }
+          
+          // Notify other clique members that user is offline
+          if (userId) {
+            broadcastToClique(cliqueId, {
+              type: 'userOffline',
+              userId
+            });
+          }
+        }
+      }
+    });
+  });
+  
+  // Helper function to broadcast to users
+  const broadcastToUsers = (userIds: number[], data: any) => {
+    userIds.forEach(userId => {
+      const clients = clientsByUser.get(userId);
+      if (clients) {
+        clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify(data));
+          }
+        });
+      }
+    });
+  };
+  
+  // Helper function to broadcast to a clique
+  const broadcastToClique = (cliqueId: number, data: any, excludeClient?: WebSocket) => {
+    const clients = clientsByClique.get(cliqueId);
+    if (clients) {
+      clients.forEach(client => {
+        if (client !== excludeClient && client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify(data));
+        }
+      });
+    }
+  };
+  
+  // After successfully adding content to chain, broadcast to clique members
+  const originalAddContentToChain = app._router.stack.find(
+    (layer: any) => layer.route?.path === '/api/chains/:id/content' && layer.route?.methods.post
+  ).handle;
+  
+  app.post("/api/chains/:id/content", isAuthenticated, async (req, res, next) => {
+    const chainId = parseInt(req.params.id);
+    const origRes = res.json;
+    
+    // Override res.json to intercept successful responses
+    res.json = function(body) {
+      // Execute original handler
+      origRes.call(this, body);
+      
+      // If successful, broadcast to clique
+      if (res.statusCode >= 200 && res.statusCode < 300 && body) {
+        try {
+          // Get the chain details to find the clique
+          storage.getChain(chainId).then(chain => {
+            if (chain) {
+              // Broadcast to clique members
+              broadcastToClique(chain.cliqueId, {
+                type: 'newContent',
+                chainId,
+                content: body
+              });
+            }
+          });
+        } catch (error) {
+          console.error('WebSocket broadcast error:', error);
+        }
+      }
+      
+      return this;
+    };
+    
+    // Call the original handler
+    originalAddContentToChain(req, res, next);
+  });
+  
+  // After adding a reaction, broadcast to related users
+  const originalAddReaction = app._router.stack.find(
+    (layer: any) => layer.route?.path === '/api/content/:id/react' && layer.route?.methods.post
+  ).handle;
+  
+  app.post("/api/content/:id/react", isAuthenticated, async (req, res, next) => {
+    const contentId = parseInt(req.params.id);
+    const origRes = res.json;
+    
+    // Override res.json to intercept successful responses
+    res.json = function(body) {
+      // Execute original handler
+      origRes.call(this, body);
+      
+      // If successful, broadcast to relevant users
+      if (res.statusCode >= 200 && res.statusCode < 300 && body) {
+        // Get content to find chain and user
+        storage.getChainContents(contentId).then(contents => {
+          const content = contents.find(c => c.id === contentId);
+          if (content) {
+            // Get chain to find clique
+            storage.getChain(content.chainId).then(chain => {
+              if (chain) {
+                // Broadcast to clique members
+                broadcastToClique(chain.cliqueId, {
+                  type: 'newReaction',
+                  contentId,
+                  reaction: body
+                });
+                
+                // Notify content creator if different from user who reacted
+                if (content.userId !== req.user!.id) {
+                  broadcastToUsers([content.userId], {
+                    type: 'notification',
+                    message: `${req.user!.displayName || req.user!.username} reagiu ao seu conteúdo`,
+                    data: {
+                      type: 'reaction',
+                      chainId: content.chainId,
+                      contentId
+                    }
+                  });
+                }
+              }
+            });
+          }
+        });
+      }
+      
+      return this;
+    };
+    
+    // Call the original handler
+    originalAddReaction(req, res, next);
+  });
+  
   return httpServer;
 }
