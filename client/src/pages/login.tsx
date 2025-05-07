@@ -47,25 +47,29 @@ export default function Login() {
   const loginMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       console.log("Tentando fazer login com:", data.username);
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Erro de login:", response.status, errorText);
-        throw new Error(`${response.status}: ${errorText}`);
+      try {
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Erro de login:", response.status, errorData);
+          throw new Error(errorData.message || `Erro ${response.status}`);
+        }
+        
+        return await response.json();
+      } catch (error) {
+        console.error("Erro de conexão:", error);
+        throw error;
       }
-      
-      return response;
     },
-    onSuccess: async (response) => {
-      const userData = await response.json();
+    onSuccess: (userData) => {
       console.log("Login bem-sucedido:", userData);
       login(userData);
       setLocation("/");
@@ -74,11 +78,11 @@ export default function Login() {
         description: "Bem-vindo de volta ao CliqueChain!",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Erro ao processar login:", error);
       toast({
         title: "Falha ao fazer login",
-        description: `${error}`,
+        description: error.message || "Erro desconhecido",
         variant: "destructive",
       });
       setIsLoading(false);

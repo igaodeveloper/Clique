@@ -54,10 +54,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.log("Usuário autenticado:", userData.username);
           setUser(userData);
         } else {
-          console.log("Não autenticado, resposta:", await response.text());
+          console.log("Não autenticado, status:", response.status);
+          setUser(null);
         }
       } catch (error) {
         console.error("Auth check failed:", error);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
