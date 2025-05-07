@@ -1,16 +1,16 @@
 import { Express } from 'express';
 import session from 'express-session';
-import { createSessionStore } from './sessionStore';
 import { configurePassport, isAuthenticated, isAdmin } from './passport';
 import authRouter from './routes';
 import { cookies } from '../utils/cookies';
+import { storage } from '../storage';
 
 /**
  * Configura todo o sistema de autenticação
  */
 export function setupAuth(app: Express): void {
-  // Criar store de sessão no PostgreSQL
-  const sessionStore = createSessionStore(session);
+  // Usar store de sessão do DatabaseStorage
+  const sessionStore = storage.sessionStore;
 
   // Configurar sessão
   app.use(

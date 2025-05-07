@@ -12,16 +12,16 @@ import {
   SuggestedClique, UserWithPersonas, CliqueWithMembers, ChainWithContents
 } from '@shared/schema';
 import { IStorage } from './storage';
-import connectPg from 'connect-pg-simple';
-import { pool } from './db';
 import { hash } from 'bcryptjs';
+import session from 'express-session';
+import { createSessionStore } from './auth/sessionStore';
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: any;
+  sessionStore: session.Store;
 
   constructor() {
-    // Criar store de sessão (será configurado corretamente em auth/sessionStore.ts)
-    this.sessionStore = null;
+    // Criar store de sessão com PostgreSQL
+    this.sessionStore = createSessionStore();
   }
   
   // USER OPERATIONS
