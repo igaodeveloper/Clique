@@ -39,13 +39,22 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // Check if user is logged in
     const checkAuth = async () => {
       try {
+        console.log("Verificando autenticação...");
         const response = await fetch("/api/auth/me", {
           credentials: "include",
+          headers: {
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+          }
         });
 
+        console.log("Status da resposta:", response.status);
         if (response.ok) {
           const userData = await response.json();
+          console.log("Usuário autenticado:", userData.username);
           setUser(userData);
+        } else {
+          console.log("Não autenticado, resposta:", await response.text());
         }
       } catch (error) {
         console.error("Auth check failed:", error);

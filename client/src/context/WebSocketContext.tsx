@@ -62,22 +62,16 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
       // Este código é um fallback para lidar com problemas de WebSocket em ambientes Replit
       let wsUrl: string;
       
-      // Verifica se estamos no ambiente Replit
-      const isReplit = typeof window !== 'undefined' && 
-        window.location.hostname.includes('replit') && 
-        window.location.hostname.includes('.dev');
+      // Simplificar a lógica de URL para WebSockets
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      wsUrl = `${protocol}//${host}/ws`;
       
-      if (isReplit) {
-        // Obtém o hostname atual (incluindo o subdomínio do replit)
-        const host = window.location.hostname;
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${host}/ws`;
-      } else {
-        // Fallback para desenvolvimento local
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        wsUrl = `${protocol}//${host}/ws`;
-      }
+      console.log("Ambiente:", {
+        hostname: window.location.hostname,
+        protocol: window.location.protocol,
+        host: window.location.host
+      });
       
       console.log('Connecting to WebSocket URL:', wsUrl);
       

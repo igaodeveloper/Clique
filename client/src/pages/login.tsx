@@ -46,10 +46,27 @@ export default function Login() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      return apiRequest("POST", "/api/auth/login", data);
+      console.log("Tentando fazer login com:", data.username);
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Erro de login:", response.status, errorText);
+        throw new Error(`${response.status}: ${errorText}`);
+      }
+      
+      return response;
     },
     onSuccess: async (response) => {
       const userData = await response.json();
+      console.log("Login bem-sucedido:", userData);
       login(userData);
       setLocation("/");
       toast({
@@ -58,6 +75,7 @@ export default function Login() {
       });
     },
     onError: (error) => {
+      console.error("Erro ao processar login:", error);
       toast({
         title: "Falha ao fazer login",
         description: `${error}`,

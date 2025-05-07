@@ -46,12 +46,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use(expressSession({
     secret: process.env.SESSION_SECRET || "cliquechain-secret-key",
     resave: false,
-    saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 },
+    saveUninitialized: true, // Salvar sessões não inicializadas para suportar o login
+    rolling: true, // Renovar cookie a cada request
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production', 
+      maxAge: 24 * 60 * 60 * 1000,
+      sameSite: 'lax', // Permite que cookies sejam enviados em navegação entre sites
+      httpOnly: true,
+      path: '/'
+    },
     store: new MemoryStoreSession({
       checkPeriod: 86400000 // prune expired entries every 24h
     })
   }));
+  
+  // Logging para sessões para facilitar depuração
+  app.use((req, res, next) => {
+    console.log("Session middleware:", { 
+      sessionID: req.sessionID,
+      hasSession: !!req.session,
+      cookie: req.session?.cookie
+    });
+    next();
+  });
 
   app.use(passport.initialize());
   app.use(passport.session());
@@ -96,9 +113,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Authentication middleware
   const isAuthenticated = (req: Request, res: Response, next: Function) => {
+    console.log("Auth check:", {
+      isAuthenticated: req.isAuthenticated(),
+      hasUser: !!req.user,
+      hasSession: !!req.session,
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie
+    });
+    
     if (req.isAuthenticated()) {
       return next();
     }
+    
     res.status(401).json({ message: "Unauthorized" });
   };
 
@@ -143,16 +169,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Login
   app.post("/api/auth/login", (req, res, next) => {
+    console.log("Login attempt:", {
+      username: req.body.username,
+      hasPassword: !!req.body.password,
+      session: !!req.session,
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie
+    });
+    
     passport.authenticate("local", (err: Error, user: any, info: any) => {
-      if (err) return next(err);
-      if (!user) return res.status(401).json({ message: info.message });
+      if (err) {
+        console.error("Authentication error:", err);
+        return next(err);
+      }
+      
+      if (!user) {
+        console.log("Authentication failed:", info.message);
+        return res.status(401).json({ message: info.message });
+      }
+      
+      console.log("Authentication successful for user:", user.username);
       
       req.logIn(user, async (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login error:", err);
+          return next(err);
+        }
+        
+        console.log("Login successful, session:", {
+          sessionID: req.sessionID,
+          user: req.user?.username,
+          isAuthenticated: req.isAuthenticated()
+        });
         
         // Get user with personas
         const userWithPersonas = await storage.getUserWithPersonas(user.id);
-        if (!userWithPersonas) return res.status(500).json({ message: "User not found" });
+        if (!userWithPersonas) {
+          console.error("User with personas not found:", user.id);
+          return res.status(500).json({ message: "User not found" });
+        }
         
         // Remove password from response
         const { password, ...userWithoutPassword } = userWithPersonas;
@@ -163,9 +218,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Logout
   app.post("/api/auth/logout", (req, res) => {
-    req.logout(() => {
-      res.json({ message: "Logged out successfully" });
-    });
+    if (req.session) {
+      console.log("Destroying session for logout");
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return res.status(500).json({ message: "Error logging out" });
+        }
+        
+        // Clear cookie on client
+        res.clearCookie('connect.sid');
+        res.status(200).json({ message: "Logged out successfully" });
+      });
+    } else {
+      // Se não tiver sessão, só responde com sucesso
+      res.status(200).json({ message: "No active session" });
+    }
   });
 
   // Get current user
@@ -661,7 +729,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  // Importar estados do WebSocket
+  // Importar constantes do WebSocket
+  console.log("WebSocket status code reference:", {
+    CONNECTING: WebSocket.CONNECTING,
+    OPEN: WebSocket.OPEN,
+    CLOSING: WebSocket.CLOSING,
+    CLOSED: WebSocket.CLOSED
+  });
+  
   const WebSocketOpenState = WebSocket.OPEN;
 
   // Helper function to broadcast to users
