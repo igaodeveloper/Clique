@@ -1,205 +1,386 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
+import { pgTable, serial, text, boolean, varchar, timestamp, integer, index, unique, primaryKey } from "drizzle-orm/pg-core";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
-// User Model
+// Users
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").notNull().unique(),
-  displayName: text("display_name").notNull(),
+  username: varchar("username", { length: 50 }).notNull().unique(),
+  email: varchar("email", { length: 100 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  displayName: varchar("display_name", { length: 100 }).notNull(),
   bio: text("bio"),
-  avatarUrl: text("avatar_url"),
+  avatarUrl: varchar("avatar_url", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    usernameIdx: index("username_idx").on(table.username),
+    emailIdx: index("email_idx").on(table.email)
+  };
 });
 
-// Define o comportamento do Zod para os campos opcionais - serão convertidos para null quando undefined
-export const userSchema = z.object({
-  id: z.number(),
-  username: z.string(),
-  password: z.string(),
-  email: z.string(),
-  displayName: z.string(),
-  bio: z.string().nullable(),
-  avatarUrl: z.string().nullable(),
-  createdAt: z.date()
+export const userRelations = relations(users, ({ many }) => ({
+  personas: many(personas),
+  cliquesMembership: many(cliqueMembers),
+  createdCliques: many(cliques, { relationName: "creator" }),
+  chains: many(chains, { relationName: "creator" }),
+  chainContents: many(chainContents),
+  reactions: many(reactions),
+  reputations: many(reputations)
+}));
+
+export const userSchema = createSelectSchema(users);
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  email: true,
-  displayName: true,
-  bio: true,
-  avatarUrl: true,
-});
-
+export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-// Use o schema Zod para garantir que os campos opcionais são tratados como null e não undefined
-export type User = z.infer<typeof userSchema>;
 
-// Persona Model
+// Personas (different identities for users in different contexts)
 export const personas = pgTable("personas", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  name: text("name").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 50 }).notNull(),
   bio: text("bio"),
-  avatarUrl: text("avatar_url"),
+  avatarUrl: varchar("avatar_url", { length: 255 }),
   isDefault: boolean("is_default").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    userIdIdx: index("persona_user_id_idx").on(table.userId),
+    uniqueDefault: unique("unique_default_persona").on(table.userId, table.isDefault)
+  };
 });
 
-export const insertPersonaSchema = createInsertSchema(personas).pick({
-  userId: true,
-  name: true,
-  bio: true,
-  avatarUrl: true,
-  isDefault: true,
+export const personaRelations = relations(personas, ({ one, many }) => ({
+  user: one(users, {
+    fields: [personas.userId],
+    references: [users.id]
+  }),
+  cliquesMembership: many(cliqueMembers),
+  chains: many(chains),
+  chainContents: many(chainContents)
+}));
+
+export const personaSchema = createSelectSchema(personas);
+export const insertPersonaSchema = createInsertSchema(personas).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export type InsertPersona = z.infer<typeof insertPersonaSchema>;
 export type Persona = typeof personas.$inferSelect;
+export type InsertPersona = z.infer<typeof insertPersonaSchema>;
 
-// Clique Model (Groups)
+// Cliques (micro-communities)
 export const cliques = pgTable("cliques", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  creatorId: integer("creator_id").notNull().references(() => users.id),
-  coverImageUrl: text("cover_image_url"),
-  category: text("category"),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  coverImageUrl: varchar("cover_image_url", { length: 255 }),
+  category: varchar("category", { length: 50 }).notNull(),
   isPrivate: boolean("is_private").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  creatorId: integer("creator_id").notNull().references(() => users.id),
   memberCount: integer("member_count").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    nameIdx: index("clique_name_idx").on(table.name),
+    categoryIdx: index("clique_category_idx").on(table.category),
+    creatorIdx: index("clique_creator_idx").on(table.creatorId)
+  };
 });
 
-export const insertCliqueSchema = createInsertSchema(cliques).pick({
-  name: true,
-  description: true,
-  creatorId: true,
-  coverImageUrl: true,
-  category: true,
-  isPrivate: true,
+export const cliqueRelations = relations(cliques, ({ one, many }) => ({
+  creator: one(users, {
+    fields: [cliques.creatorId],
+    references: [users.id],
+    relationName: "creator"
+  }),
+  members: many(cliqueMembers),
+  chains: many(chains)
+}));
+
+export const cliqueSchema = createSelectSchema(cliques);
+export const insertCliqueSchema = createInsertSchema(cliques).omit({
+  id: true,
+  memberCount: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export type InsertClique = z.infer<typeof insertCliqueSchema>;
 export type Clique = typeof cliques.$inferSelect;
+export type InsertClique = z.infer<typeof insertCliqueSchema>;
 
-// Clique Membership
+// Clique members
 export const cliqueMembers = pgTable("clique_members", {
   id: serial("id").primaryKey(),
-  cliqueId: integer("clique_id").notNull().references(() => cliques.id),
-  userId: integer("user_id").notNull().references(() => users.id),
-  personaId: integer("persona_id").references(() => personas.id),
-  role: text("role").default("member").notNull(),
+  cliqueId: integer("clique_id").notNull().references(() => cliques.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  personaId: integer("persona_id").notNull().references(() => personas.id),
+  role: varchar("role", { length: 20 }).default("member").notNull(),
   joinedAt: timestamp("joined_at").defaultNow().notNull(),
+  lastActive: timestamp("last_active").defaultNow().notNull()
+}, (table) => {
+  return {
+    cliqueUserUnique: unique("clique_user_unique").on(table.cliqueId, table.userId),
+    cliqueIdIdx: index("member_clique_id_idx").on(table.cliqueId),
+    userIdIdx: index("member_user_id_idx").on(table.userId),
+    personaIdIdx: index("member_persona_id_idx").on(table.personaId)
+  };
 });
 
-export const insertCliqueMemberSchema = createInsertSchema(cliqueMembers).pick({
-  cliqueId: true,
-  userId: true,
-  personaId: true,
-  role: true,
+export const cliqueMemberRelations = relations(cliqueMembers, ({ one }) => ({
+  clique: one(cliques, {
+    fields: [cliqueMembers.cliqueId],
+    references: [cliques.id]
+  }),
+  user: one(users, {
+    fields: [cliqueMembers.userId],
+    references: [users.id]
+  }),
+  persona: one(personas, {
+    fields: [cliqueMembers.personaId],
+    references: [personas.id]
+  })
+}));
+
+export const cliqueMemberSchema = createSelectSchema(cliqueMembers);
+export const insertCliqueMemberSchema = createInsertSchema(cliqueMembers).omit({
+  id: true,
+  joinedAt: true,
+  lastActive: true
 });
 
-export type InsertCliqueMember = z.infer<typeof insertCliqueMemberSchema>;
 export type CliqueMember = typeof cliqueMembers.$inferSelect;
+export type InsertCliqueMember = z.infer<typeof insertCliqueMemberSchema>;
 
-// Chain Model (Content Threads)
+// Chains (collaborative content threads)
 export const chains = pgTable("chains", {
   id: serial("id").primaryKey(),
-  cliqueId: integer("clique_id").notNull().references(() => cliques.id),
+  cliqueId: integer("clique_id").notNull().references(() => cliques.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 200 }).notNull(),
   creatorId: integer("creator_id").notNull().references(() => users.id),
-  personaId: integer("persona_id").references(() => personas.id),
-  title: text("title"),
+  personaId: integer("persona_id").notNull().references(() => personas.id),
+  tags: text("tags").array(),
+  contentCount: integer("content_count").default(0).notNull(),
+  isPinned: boolean("is_pinned").default(false).notNull(),
+  lastActivityAt: timestamp("last_activity_at").defaultNow().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    cliqueIdIdx: index("chain_clique_id_idx").on(table.cliqueId),
+    creatorIdIdx: index("chain_creator_id_idx").on(table.creatorId),
+    lastActivityIdx: index("chain_last_activity_idx").on(table.lastActivityAt)
+  };
 });
 
-export const insertChainSchema = createInsertSchema(chains).pick({
-  cliqueId: true,
-  creatorId: true,
-  personaId: true,
-  title: true,
+export const chainRelations = relations(chains, ({ one, many }) => ({
+  clique: one(cliques, {
+    fields: [chains.cliqueId],
+    references: [cliques.id]
+  }),
+  creator: one(users, {
+    fields: [chains.creatorId],
+    references: [users.id],
+    relationName: "creator"
+  }),
+  persona: one(personas, {
+    fields: [chains.personaId],
+    references: [personas.id]
+  }),
+  contents: many(chainContents)
+}));
+
+export const chainSchema = createSelectSchema(chains);
+export const insertChainSchema = createInsertSchema(chains).omit({
+  id: true,
+  contentCount: true,
+  lastActivityAt: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export type InsertChain = z.infer<typeof insertChainSchema>;
 export type Chain = typeof chains.$inferSelect;
+export type InsertChain = z.infer<typeof insertChainSchema>;
 
-// Chain Content Model
+// Chain content entries
 export const chainContents = pgTable("chain_contents", {
   id: serial("id").primaryKey(),
-  chainId: integer("chain_id").notNull().references(() => chains.id),
+  chainId: integer("chain_id").notNull().references(() => chains.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id),
   personaId: integer("persona_id").references(() => personas.id),
-  content: text("content"),
-  contentType: text("content_type").notNull(), // text, image, video, audio
-  mediaUrl: text("media_url"),
+  content: text("content").notNull(),
+  contentType: varchar("content_type", { length: 50 }).default("text").notNull(),
+  mediaUrl: varchar("media_url", { length: 255 }),
+  position: integer("position").notNull(),
+  reactionCount: integer("reaction_count").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  position: integer("position").notNull(), // for ordering content in the chain
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    chainIdIdx: index("content_chain_id_idx").on(table.chainId),
+    userIdIdx: index("content_user_id_idx").on(table.userId),
+    positionIdx: index("content_position_idx").on(table.chainId, table.position)
+  };
 });
 
-export const insertChainContentSchema = createInsertSchema(chainContents).pick({
-  chainId: true,
-  userId: true,
-  personaId: true,
-  content: true,
-  contentType: true,
-  mediaUrl: true,
-  position: true,
+export const chainContentRelations = relations(chainContents, ({ one, many }) => ({
+  chain: one(chains, {
+    fields: [chainContents.chainId],
+    references: [chains.id]
+  }),
+  user: one(users, {
+    fields: [chainContents.userId],
+    references: [users.id]
+  }),
+  persona: one(personas, {
+    fields: [chainContents.personaId],
+    references: [personas.id],
+    nullable: true
+  }),
+  reactions: many(reactions)
+}));
+
+export const chainContentSchema = createSelectSchema(chainContents);
+export const insertChainContentSchema = createInsertSchema(chainContents).omit({
+  id: true,
+  reactionCount: true,
+  createdAt: true,
+  updatedAt: true
 });
 
-export type InsertChainContent = z.infer<typeof insertChainContentSchema>;
 export type ChainContent = typeof chainContents.$inferSelect;
+export type InsertChainContent = z.infer<typeof insertChainContentSchema>;
 
-// Reputation Model
-export const reputations = pgTable("reputations", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  badgeType: text("badge_type").notNull(),
-  badgeName: text("badge_name").notNull(),
-  cliqueId: integer("clique_id").references(() => cliques.id),
-  earnedAt: timestamp("earned_at").defaultNow().notNull(),
-  level: integer("level").default(1).notNull(),
-});
-
-export const insertReputationSchema = createInsertSchema(reputations).pick({
-  userId: true,
-  badgeType: true,
-  badgeName: true,
-  cliqueId: true,
-  level: true,
-});
-
-export type InsertReputation = z.infer<typeof insertReputationSchema>;
-export type Reputation = typeof reputations.$inferSelect;
-
-// Reaction Model (likes, etc.)
+// Reactions to chain content
 export const reactions = pgTable("reactions", {
   id: serial("id").primaryKey(),
-  chainContentId: integer("chain_content_id").notNull().references(() => chainContents.id),
+  chainContentId: integer("chain_content_id").notNull().references(() => chainContents.id, { onDelete: "cascade" }),
   userId: integer("user_id").notNull().references(() => users.id),
-  type: text("type").notNull(), // like, love, etc.
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  type: varchar("type", { length: 20 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    contentIdIdx: index("reaction_content_id_idx").on(table.chainContentId),
+    userIdIdx: index("reaction_user_id_idx").on(table.userId),
+    uniqueUserReaction: unique("unique_user_reaction").on(table.chainContentId, table.userId)
+  };
 });
 
-export const insertReactionSchema = createInsertSchema(reactions).pick({
-  chainContentId: true,
-  userId: true,
-  type: true,
+export const reactionRelations = relations(reactions, ({ one }) => ({
+  chainContent: one(chainContents, {
+    fields: [reactions.chainContentId],
+    references: [chainContents.id]
+  }),
+  user: one(users, {
+    fields: [reactions.userId],
+    references: [users.id]
+  })
+}));
+
+export const reactionSchema = createSelectSchema(reactions);
+export const insertReactionSchema = createInsertSchema(reactions).omit({
+  id: true,
+  createdAt: true
 });
 
-export type InsertReaction = z.infer<typeof insertReactionSchema>;
 export type Reaction = typeof reactions.$inferSelect;
+export type InsertReaction = z.infer<typeof insertReactionSchema>;
 
-// For API responses
+// Reputation system
+export const reputations = pgTable("reputations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  badgeType: varchar("badge_type", { length: 50 }).notNull(),
+  badgeName: varchar("badge_name", { length: 100 }).notNull(),
+  cliqueId: integer("clique_id").references(() => cliques.id),
+  level: integer("level").default(1).notNull(),
+  points: integer("points").default(10).notNull(),
+  awardedAt: timestamp("awarded_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    userIdIdx: index("reputation_user_id_idx").on(table.userId),
+    cliqueIdIdx: index("reputation_clique_id_idx").on(table.cliqueId),
+    badgeTypeIdx: index("reputation_badge_type_idx").on(table.badgeType)
+  };
+});
+
+export const reputationRelations = relations(reputations, ({ one }) => ({
+  user: one(users, {
+    fields: [reputations.userId],
+    references: [users.id]
+  }),
+  clique: one(cliques, {
+    fields: [reputations.cliqueId],
+    references: [cliques.id],
+    nullable: true
+  })
+}));
+
+export const reputationSchema = createSelectSchema(reputations);
+export const insertReputationSchema = createInsertSchema(reputations).omit({
+  id: true,
+  points: true,
+  awardedAt: true
+});
+
+export type Reputation = typeof reputations.$inferSelect;
+export type InsertReputation = z.infer<typeof insertReputationSchema>;
+
+// Notifications
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 100 }).notNull(),
+  message: text("message").notNull(),
+  link: varchar("link", { length: 255 }),
+  isRead: boolean("is_read").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+}, (table) => {
+  return {
+    userIdIdx: index("notification_user_id_idx").on(table.userId),
+    isReadIdx: index("notification_is_read_idx").on(table.isRead),
+    createdAtIdx: index("notification_created_at_idx").on(table.createdAt)
+  };
+});
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id]
+  })
+}));
+
+export const notificationSchema = createSelectSchema(notifications);
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  isRead: true,
+  createdAt: true
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+
+// Type with relationships
 export type UserWithPersonas = User & {
   personas: Persona[];
 };
 
 export type CliqueWithMembers = Clique & {
-  members: CliqueMember[];
+  members: (CliqueMember & {
+    user: Partial<User>;
+    persona: Partial<Persona>;
+  })[];
 };
 
 export type ChainWithContents = Chain & {
@@ -208,14 +389,20 @@ export type ChainWithContents = Chain & {
     persona: Partial<Persona> | null;
     reactions: Reaction[];
   })[];
+  clique: Partial<Clique>;
 };
 
 export type SuggestedClique = {
   id: number;
   name: string;
   description: string;
-  coverImageUrl: string;
+  coverImageUrl: string | null;
   category: string;
   memberCount: number;
-  members: Array<{ id: number; username: string; avatarUrl: string }>;
+  members: Array<{ 
+    id: number; 
+    username: string; 
+    displayName: string;
+    avatarUrl: string | null;
+  }>;
 };
