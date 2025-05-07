@@ -53,7 +53,7 @@ export function configurePassport() {
   );
   
   // Serializar usuário para a sessão
-  passport.serializeUser((user: User, done) => {
+  passport.serializeUser((user: any, done) => {
     console.log(`Serializando usuário para sessão: ${user.id}`);
     done(null, user.id);
   });
@@ -74,13 +74,18 @@ export function configurePassport() {
         return done(null, false);
       }
       
-      // Atualizar última atividade do usuário
-      await db
-        .update(users)
-        .set({ 
-          updatedAt: new Date()
-        })
-        .where(eq(users.id, id));
+      try {
+        // Atualizar última atividade do usuário
+        await db
+          .update(users)
+          .set({ 
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, id));
+      } catch (updateError) {
+        console.warn('Erro ao atualizar última atividade:', updateError);
+        // Não falhar o processo por causa disso
+      }
       
       console.log(`Usuário deserializado com sucesso: ${id}`);
       done(null, user);
