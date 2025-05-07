@@ -107,8 +107,8 @@ export class MemStorage implements IStorage {
     const demoUser: InsertUser = {
       username: "demo",
       email: "demo@example.com",
-      // Certifique-se de que esta é a senha hash correta para 'password123'
-      password: "$2a$10$jAo7cHxqsH9OT4TFxoJCX.YDhYNYZAxaBjlZ0i3tM0pAhESLRwIwG", // password123
+      // Hash correto para 'password123'
+      password: "$2b$10$Kk1giib6vurdNlHIS2MGQu33MjM1voT93oUK6bPYkGv0FczJApL5q", // password123
       displayName: "Demo User",
       bio: "Este é um usuário de demonstração para testes"
     };
