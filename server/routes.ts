@@ -25,14 +25,15 @@ import MemoryStore from "memorystore";
 // Estender a interface do Express para incluir o usuário na requisição
 declare global {
   namespace Express {
+    // Esta interface precisa corresponder exatamente ao tipo User definido em shared/schema.ts
     interface User {
       id: number;
       username: string;
       email: string;
       password: string;
       displayName: string;
-      bio?: string;
-      avatarUrl?: string;
+      bio: string | null;
+      avatarUrl: string | null;
       createdAt: Date;
     }
   }

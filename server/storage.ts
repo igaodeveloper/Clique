@@ -98,13 +98,53 @@ export class MemStorage implements IStorage {
     this.reputationIdCounter = 1;
     this.reactionIdCounter = 1;
     
-    // Initialize with some sample data for development
+    // Initialize with sample data for development and testing
     this.initSampleData();
   }
 
   private initSampleData() {
-    // We'll leave this function empty as we shouldn't include mock data in production
-    // This will allow for easy testing during development if needed
+    // Create a demo user for testing
+    const demoUser: InsertUser = {
+      username: "demo",
+      email: "demo@example.com",
+      password: "$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa", // password123
+      displayName: "Demo User",
+      bio: "Este é um usuário de demonstração para testes"
+    };
+    
+    this.createUser(demoUser).then(user => {
+      // Create a demo clique
+      this.createClique({
+        name: "Clique de Demonstração",
+        description: "Este é um clique criado para demonstrar a funcionalidade do aplicativo",
+        isPrivate: false,
+        category: "Demo",
+        tags: ["demo", "teste", "exemplo"],
+        creatorId: user.id,
+        coverImageUrl: ""
+      }).then(clique => {
+        // Create a demo chain in the clique
+        this.createChain({
+          title: "Como usar o CliqueChain",
+          description: "Um guia para iniciantes no CliqueChain",
+          cliqueId: clique.id,
+          creatorId: user.id,
+          personaId: null,
+          tags: ["tutorial", "guia"]
+        }).then(chain => {
+          // Add content to the chain
+          this.addContentToChain({
+            chainId: chain.id,
+            userId: user.id,
+            personaId: null,
+            content: "Bem-vindo ao CliqueChain! Esta é uma plataforma para conectar pessoas com interesses semelhantes.",
+            contentType: "text",
+            mediaUrl: null,
+            position: 0
+          });
+        });
+      });
+    });
   }
 
   // User operations
