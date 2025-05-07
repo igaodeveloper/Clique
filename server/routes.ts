@@ -530,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId = data.userId;
           
           // Add to user clients
-          if (userId) {
+          if (userId !== null) {
             if (!clientsByUser.has(userId)) {
               clientsByUser.set(userId, []);
             }
@@ -545,7 +545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         else if (data.type === 'joinClique') {
           // Join a clique's real-time updates
-          if (!userId) {
+          if (userId === null) {
             ws.send(JSON.stringify({ 
               type: 'error', 
               message: 'Not authenticated' 
@@ -556,44 +556,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cliqueId = data.cliqueId;
           
           // Verify user is member of clique
-          const isMember = await storage.isUserMemberOfClique(userId, cliqueId);
-          if (!isMember) {
+          if (cliqueId !== null) {
+            const isMember = await storage.isUserMemberOfClique(userId, cliqueId);
+            if (!isMember) {
+              ws.send(JSON.stringify({ 
+                type: 'error', 
+                message: 'Not a member of this clique' 
+              }));
+              return;
+            }
+            
+            // Add to clique clients
+            if (!clientsByClique.has(cliqueId)) {
+              clientsByClique.set(cliqueId, []);
+            }
+            clientsByClique.get(cliqueId)!.push(ws);
+            
+            // Send confirmation
             ws.send(JSON.stringify({ 
-              type: 'error', 
-              message: 'Not a member of this clique' 
+              type: 'joinedClique', 
+              cliqueId 
             }));
-            return;
-          }
-          
-          // Add to clique clients
-          if (!clientsByClique.has(cliqueId)) {
-            clientsByClique.set(cliqueId, []);
-          }
-          clientsByClique.get(cliqueId)!.push(ws);
-          
-          // Send confirmation
-          ws.send(JSON.stringify({ 
-            type: 'joinedClique', 
-            cliqueId 
-          }));
-          
-          // Notify clique members that user is online
-          const user = await storage.getUser(userId);
-          if (user) {
-            broadcastToClique(cliqueId, {
-              type: 'userOnline',
-              user: { 
-                id: user.id,
-                username: user.username,
-                displayName: user.displayName,
-                avatarUrl: user.avatarUrl
-              }
-            }, ws);
+            
+            // Notify clique members that user is online
+            const user = await storage.getUser(userId);
+            if (user) {
+              broadcastToClique(cliqueId, {
+                type: 'userOnline',
+                user: { 
+                  id: user.id,
+                  username: user.username,
+                  displayName: user.displayName,
+                  avatarUrl: user.avatarUrl
+                }
+              }, ws);
+            }
           }
         }
         else if (data.type === 'typing') {
           // User is typing in a chain
-          if (!userId || !cliqueId) return;
+          if (userId === null || cliqueId === null) return;
           
           // Broadcast typing status to clique
           broadcastToClique(cliqueId, {
@@ -610,7 +612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     ws.on('close', () => {
       // Remove from user clients
-      if (userId) {
+      if (userId !== null) {
         const userClients = clientsByUser.get(userId);
         if (userClients) {
           const index = userClients.indexOf(ws);
@@ -624,7 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Remove from clique clients
-      if (cliqueId) {
+      if (cliqueId !== null) {
         const cliqueClients = clientsByClique.get(cliqueId);
         if (cliqueClients) {
           const index = cliqueClients.indexOf(ws);
@@ -636,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           
           // Notify other clique members that user is offline
-          if (userId) {
+          if (userId !== null) {
             broadcastToClique(cliqueId, {
               type: 'userOffline',
               userId
