@@ -20,8 +20,21 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    // Criar store de sessão com PostgreSQL
-    this.sessionStore = createSessionStore();
+    // Inicialização temporária do sessionStore
+    // Será substituído logo em seguida pelo createSessionStore()
+    this.sessionStore = {} as session.Store;
+    
+    // Criar store de sessão com PostgreSQL de forma assíncrona
+    this.initSessionStore();
+  }
+  
+  private async initSessionStore() {
+    try {
+      this.sessionStore = await createSessionStore();
+      console.log("Session store inicializado com sucesso");
+    } catch (error) {
+      console.error("Erro ao inicializar session store:", error);
+    }
   }
   
   // USER OPERATIONS

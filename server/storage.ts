@@ -11,6 +11,9 @@ import {
 } from "@shared/schema";
 
 export interface IStorage {
+  // Propriedade de sessão
+  sessionStore: any;
+  
   // User operations
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -78,6 +81,8 @@ export class MemStorage implements IStorage {
   private chainContentIdCounter: number;
   private reputationIdCounter: number;
   private reactionIdCounter: number;
+  
+  sessionStore: any;
 
   constructor() {
     this.users = new Map();
@@ -97,6 +102,12 @@ export class MemStorage implements IStorage {
     this.chainContentIdCounter = 1;
     this.reputationIdCounter = 1;
     this.reactionIdCounter = 1;
+    
+    // Criar MemoryStore para sessões
+    const MemoryStore = require('memorystore')(require('express-session'));
+    this.sessionStore = new MemoryStore({
+      checkPeriod: 86400000 // 24 horas
+    });
     
     // Initialize with sample data for development and testing
     this.initSampleData();
