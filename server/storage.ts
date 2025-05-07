@@ -583,4 +583,6 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from './DatabaseStorage';
+
+export const storage = new DatabaseStorage();
