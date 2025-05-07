@@ -59,16 +59,38 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
     // Create WebSocket connection
     try {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/ws`;
+      // Este código é um fallback para lidar com problemas de WebSocket em ambientes Replit
+      let wsUrl: string;
+      
+      // Verifica se estamos no ambiente Replit
+      const isReplit = typeof window !== 'undefined' && 
+        window.location.hostname.includes('replit') && 
+        window.location.hostname.includes('.dev');
+      
+      if (isReplit) {
+        // Obtém o hostname atual (incluindo o subdomínio do replit)
+        const host = window.location.hostname;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${host}/ws`;
+      } else {
+        // Fallback para desenvolvimento local
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        wsUrl = `${protocol}//${host}/ws`;
+      }
+      
       console.log('Connecting to WebSocket URL:', wsUrl);
+      
+      // Adiciona tratamento de exceção para URL inválida
+      if (!wsUrl || wsUrl.includes('undefined')) {
+        throw new Error('Invalid WebSocket URL: ' + wsUrl);
+      }
       
       newSocket = new WebSocket(wsUrl);
 
       newSocket.onopen = () => {
         console.log('WebSocket connected');
-        if (user && newSocket) {
+        if (user && newSocket && newSocket.readyState === WebSocket.OPEN) {
           // Authenticate connection
           newSocket.send(JSON.stringify({
             type: 'authenticate',
@@ -101,6 +123,15 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
       newSocket.onerror = (error) => {
         console.error('WebSocket error:', error);
+        // Quando ocorre um erro, o socket nem sempre é fechado automaticamente
+        if (newSocket && newSocket.readyState !== WebSocket.CLOSED) {
+          try {
+            newSocket.close();
+          } catch (closeError) {
+            console.error('Error closing WebSocket after error:', closeError);
+          }
+        }
+        setIsConnected(false);
       };
 
       setSocket(newSocket);
@@ -112,7 +143,14 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     // Cleanup on unmount
     return () => {
       if (newSocket) {
-        newSocket.close();
+        try {
+          // O close() pode lançar exceção se já estiver fechado
+          if (newSocket.readyState !== WebSocket.CLOSED) {
+            newSocket.close();
+          }
+        } catch (e) {
+          console.error('Error closing WebSocket on cleanup:', e);
+        }
       }
     };
   }, [user]);
@@ -212,25 +250,42 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     }
   };
 
+  // Envio seguro de mensagens WebSocket
+  const safeSend = (data: any) => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      try {
+        socket.send(JSON.stringify(data));
+        return true;
+      } catch (error) {
+        console.error('Error sending WebSocket message:', error);
+        return false;
+      }
+    }
+    return false;
+  };
+
   // Join a clique
   const joinClique = (cliqueId: number) => {
-    if (socket && isConnected) {
-      socket.send(JSON.stringify({
+    if (isConnected) {
+      const sent = safeSend({
         type: 'joinClique',
         cliqueId
-      }));
-      setCurrentCliqueId(cliqueId);
+      });
+      
+      if (sent) {
+        setCurrentCliqueId(cliqueId);
+      }
     }
   };
 
   // Send typing status
   const sendTypingStatus = (chainId: number, isTyping: boolean) => {
-    if (socket && isConnected && currentCliqueId) {
-      socket.send(JSON.stringify({
+    if (isConnected && currentCliqueId) {
+      safeSend({
         type: 'typing',
         chainId,
         isTyping
-      }));
+      });
     }
   };
 

@@ -140,14 +140,19 @@ export default function Login() {
         <CardFooter className="flex flex-col space-y-4 text-center">
           <div className="text-sm text-gray-500">
             Ainda não tem uma conta?{" "}
-            <Link href="/register">
-              <a className="text-primary-600 hover:underline font-medium">
-                Cadastre-se
-              </a>
+            <Link href="/register" className="text-primary-600 hover:underline font-medium">
+              Cadastre-se
             </Link>
           </div>
           
-          <div className="text-xs text-gray-400">
+          <div className="bg-blue-50 p-3 rounded-md text-sm text-blue-700 mt-2">
+            Bem-vindo ao CliqueChain! Este aplicativo está funcionando com autenticação. 
+            Para testar, cadastre uma nova conta ou use as credenciais de teste:<br/>
+            <strong>Usuário:</strong> demo<br/>
+            <strong>Senha:</strong> password123
+          </div>
+          
+          <div className="text-xs text-gray-400 mt-2">
             Ao entrar, você concorda com nossos Termos de Serviço e Política de Privacidade.
           </div>
         </CardFooter>
