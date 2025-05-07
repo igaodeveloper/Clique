@@ -57,7 +57,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
     // Create WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
+    console.log('Connecting to WebSocket URL:', wsUrl);
     const newSocket = new WebSocket(wsUrl);
 
     // Handle WebSocket events

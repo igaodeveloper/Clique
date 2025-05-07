@@ -22,6 +22,22 @@ import { Strategy as LocalStrategy } from "passport-local";
 import z from "zod";
 import MemoryStore from "memorystore";
 
+// Estender a interface do Express para incluir o usuário na requisição
+declare global {
+  namespace Express {
+    interface User {
+      id: number;
+      username: string;
+      email: string;
+      password: string;
+      displayName: string;
+      bio?: string;
+      avatarUrl?: string;
+      createdAt: Date;
+    }
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup session and authentication
   const MemoryStoreSession = MemoryStore(expressSession);
@@ -448,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (isFirstReaction) {
         // Get the content to find its creator
-        const contents = Array.from(storage.getChainContents(contentId));
+        const contents = await storage.getChainContents(contentId);
         const content = contents.find(c => c.id === contentId);
         
         if (content && content.userId !== req.user!.id) {

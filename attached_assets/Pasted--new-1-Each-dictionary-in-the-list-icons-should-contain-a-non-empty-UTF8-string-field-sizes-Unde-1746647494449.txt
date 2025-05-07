@@ -1,0 +1,99 @@
+/new:1 Each dictionary in the list "icons" should contain a non-empty UTF8 string field "sizes".Understand this warning
+/new:1 Each dictionary in the list "icons" should contain a non-empty UTF8 string field "type".Understand this warning
+/new:1 Each dictionary in the list "icons" should contain a non-empty UTF8 string field "sizes".Understand this warning
+/new:1 Each dictionary in the list "icons" should contain a non-empty UTF8 string field "type".Understand this warning
+instrument.js:109 As of March 1st, 2025, google.maps.places.AutocompleteService is not available to new customers. Please use google.maps.places.AutocompleteSuggestion instead. At this time, google.maps.places.AutocompleteService is not scheduled to be discontinued, but google.maps.places.AutocompleteSuggestion is recommended over google.maps.places.AutocompleteService. While google.maps.places.AutocompleteService will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.AutocompleteService will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide.
+(anonymous) @ instrument.js:109Understand this warning
+instrument.js:109 As of March 1st, 2025, google.maps.places.PlacesService is not available to new customers. Please use google.maps.places.Place instead. At this time, google.maps.places.PlacesService is not scheduled to be discontinued, but google.maps.places.Place is recommended over google.maps.places.PlacesService. While google.maps.places.PlacesService will continue to receive bug fixes for any major regressions, existing bugs in google.maps.places.PlacesService will not be addressed. At least 12 months notice will be given before support is discontinued. Please see https://developers.google.com/maps/legacy for additional details and https://developers.google.com/maps/documentation/javascript/places-migration-overview for the migration guide.
+(anonymous) @ instrument.js:109Understand this warning
+_app-6c59716e09c6d9d8.js:13 onClick is deprecated, please use onPress
+(anonymous) @ _app-6c59716e09c6d9d8.js:13Understand this warning
+4_app-6c59716e09c6d9d8.js:13 If you do not provide children, you must specify an aria-label for accessibility
+(anonymous) @ _app-6c59716e09c6d9d8.js:13Understand this warning
+5Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.Understand this error
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'battery'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+framework-f31cffcf2f8fea62.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-f31cffcf2f8fea62.js:1Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'battery'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.Understand this warning
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.Understand this warning
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.Understand this warning
+a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/:1 
+            
+            
+           Failed to load resource: the server responded with a status of 502 (Bad Gateway)Understand this error
+a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/:1 
+            
+            
+           Failed to load resource: the server responded with a status of 502 (Bad Gateway)Understand this error
+Network.js:227 WebSocket connection to 'wss://a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/?token=Znw2XLxJu9MB' failed: 
+t @ Network.js:227Understand this error
+a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+Network.js:227 WebSocket connection to 'wss://a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/?token=oQn0fzRWexxr' failed: 
+t @ Network.js:227Understand this error
+a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+Network.js:227 WebSocket connection to 'wss://a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/?token=oQn0fzRWexxr' failed: 
+t @ Network.js:227Understand this error
+Network.js:227 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=oQn0fzRWexxr' is invalid.
+    at new t (Network.js:227:18)
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)Understand this error
+a33cbc81-b5b2-46c6-bd75-08c5e8ce866b-00-1y1shyw2ruf6.kirk.replit.dev/api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 (Unauthorized)Understand this error
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.Understand this warning
+stallwart.build.js:1 stallwart: failed ping 1
