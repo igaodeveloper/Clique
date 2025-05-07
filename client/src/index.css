@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 20 14.3% 4.1%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 244 75% 58%;  /* CliqueChain purple */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 271 91% 65%; /* Secondary purple */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 327 73% 69%; /* Accent pink */
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 244 75% 58%;
+  --radius: 0.5rem;
+
+  /* Chart colors - not used in this app but keeping for compatibility */
+  --chart-1: 244 75% 58%;
+  --chart-2: 271 91% 65%;
+  --chart-3: 327 73% 69%;
+  --chart-4: 310 50% 50%;
+  --chart-5: 230 70% 60%;
+
+  /* Sidebar colors - not configured in the original but adding for design */
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 20 14.3% 4.1%;
+  --sidebar-primary: 244 75% 58%;
+  --sidebar-primary-foreground: 211 100% 99%;
+  --sidebar-accent: 246 100% 97%;
+  --sidebar-accent-foreground: 244 75% 58%;
+  --sidebar-border: 20 5.9% 90%;
+  --sidebar-ring: 244 75% 58%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 244 75% 58%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 271 91% 65%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 327 73% 69%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 240 4.9% 83.9%;
+  
+  /* Sidebar colors for dark mode */
+  --sidebar-background: 240 10% 3.9%;
+  --sidebar-foreground: 0 0% 98%; 
+  --sidebar-primary: 244 75% 58%;
+  --sidebar-primary-foreground: 211 100% 99%;
+  --sidebar-accent: 244 75% 15%;
+  --sidebar-accent-foreground: 244 75% 58%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-ring: 240 4.9% 83.9%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom styles for CliqueChain */
+.persona-indicator {
+  transition: all 0.3s ease;
+}
+
+.chain-item {
+  transition: all 0.2s ease;
+}
+
+.chain-item:hover {
+  transform: translateY(-2px);
+}
+
+.clique-card {
+  transition: all 0.3s ease;
+}
+
+.clique-card:hover {
+  transform: scale(1.02);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.3);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Animation for persona switching */
+@keyframes personaFade {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.persona-active {
+  animation: personaFade 0.3s ease-out forwards;
+}

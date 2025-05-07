@@ -1,0 +1,491 @@
+import type { Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { 
+  insertUserSchema, 
+  insertPersonaSchema, 
+  insertCliqueSchema, 
+  insertCliqueMemberSchema,
+  insertChainSchema,
+  insertChainContentSchema,
+  insertReactionSchema,
+  insertReputationSchema
+} from "@shared/schema";
+import bcrypt from "bcryptjs";
+import expressSession from "express-session";
+import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import z from "zod";
+import MemoryStore from "memorystore";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup session and authentication
+  const MemoryStoreSession = MemoryStore(expressSession);
+  app.use(expressSession({
+    secret: process.env.SESSION_SECRET || "cliquechain-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: process.env.NODE_ENV === 'production', maxAge: 24 * 60 * 60 * 1000 },
+    store: new MemoryStoreSession({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    })
+  }));
+
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+  // Authentication setup
+  passport.use(new LocalStrategy(async (username, password, done) => {
+    try {
+      const user = await storage.getUserByUsername(username);
+      if (!user) return done(null, false, { message: "Incorrect username" });
+      
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return done(null, false, { message: "Incorrect password" });
+      
+      return done(null, user);
+    } catch (err) {
+      return done(err);
+    }
+  }));
+
+  passport.serializeUser((user: any, done) => {
+    done(null, user.id);
+  });
+
+  passport.deserializeUser(async (id: number, done) => {
+    try {
+      const user = await storage.getUser(id);
+      done(null, user);
+    } catch (err) {
+      done(err, null);
+    }
+  });
+
+  // Authentication middleware
+  const isAuthenticated = (req: Request, res: Response, next: Function) => {
+    if (req.isAuthenticated()) {
+      return next();
+    }
+    res.status(401).json({ message: "Unauthorized" });
+  };
+
+  // ======================= AUTH ROUTES =======================
+  
+  // Register
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const userInput = insertUserSchema.parse(req.body);
+      
+      // Check if username or email exists
+      const existingUsername = await storage.getUserByUsername(userInput.username);
+      if (existingUsername) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const existingEmail = await storage.getUserByEmail(userInput.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+      
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(userInput.password, salt);
+      
+      // Create user
+      const user = await storage.createUser({
+        ...userInput,
+        password: hashedPassword
+      });
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Login
+  app.post("/api/auth/login", (req, res, next) => {
+    passport.authenticate("local", (err: Error, user: any, info: any) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ message: info.message });
+      
+      req.logIn(user, async (err) => {
+        if (err) return next(err);
+        
+        // Get user with personas
+        const userWithPersonas = await storage.getUserWithPersonas(user.id);
+        if (!userWithPersonas) return res.status(500).json({ message: "User not found" });
+        
+        // Remove password from response
+        const { password, ...userWithoutPassword } = userWithPersonas;
+        return res.json(userWithoutPassword);
+      });
+    })(req, res, next);
+  });
+
+  // Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.logout(() => {
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Get current user
+  app.get("/api/auth/me", isAuthenticated, async (req, res) => {
+    const userWithPersonas = await storage.getUserWithPersonas(req.user!.id);
+    if (!userWithPersonas) return res.status(500).json({ message: "User not found" });
+    
+    // Remove password from response
+    const { password, ...userWithoutPassword } = userWithPersonas;
+    res.json(userWithoutPassword);
+  });
+
+  // ======================= PERSONA ROUTES =======================
+  
+  // Create persona
+  app.post("/api/personas", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertPersonaSchema.parse({
+        ...req.body,
+        userId: req.user!.id
+      });
+      
+      const persona = await storage.createPersona(data);
+      res.status(201).json(persona);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get user personas
+  app.get("/api/personas", isAuthenticated, async (req, res) => {
+    const personas = await storage.getPersonasByUserId(req.user!.id);
+    res.json(personas);
+  });
+
+  // Update persona
+  app.patch("/api/personas/:id", isAuthenticated, async (req, res) => {
+    const personaId = parseInt(req.params.id);
+    const persona = await storage.getPersona(personaId);
+    
+    if (!persona) {
+      return res.status(404).json({ message: "Persona not found" });
+    }
+    
+    if (persona.userId !== req.user!.id) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    
+    try {
+      const updatedPersona = await storage.updatePersona(personaId, req.body);
+      res.json(updatedPersona);
+    } catch (error) {
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // ======================= CLIQUE ROUTES =======================
+  
+  // Create clique
+  app.post("/api/cliques", isAuthenticated, async (req, res) => {
+    try {
+      const data = insertCliqueSchema.parse({
+        ...req.body,
+        creatorId: req.user!.id
+      });
+      
+      const clique = await storage.createClique(data);
+      res.status(201).json(clique);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get user cliques
+  app.get("/api/cliques", isAuthenticated, async (req, res) => {
+    const cliques = await storage.getCliquesByUserId(req.user!.id);
+    res.json(cliques);
+  });
+
+  // Get suggested cliques
+  app.get("/api/cliques/suggested", isAuthenticated, async (req, res) => {
+    const suggestedCliques = await storage.getSuggestedCliques(req.user!.id);
+    res.json(suggestedCliques);
+  });
+
+  // Get specific clique
+  app.get("/api/cliques/:id", isAuthenticated, async (req, res) => {
+    const cliqueId = parseInt(req.params.id);
+    const clique = await storage.getClique(cliqueId);
+    
+    if (!clique) {
+      return res.status(404).json({ message: "Clique not found" });
+    }
+    
+    // Check if user is a member if clique is private
+    if (clique.isPrivate) {
+      const isMember = await storage.isUserMemberOfClique(req.user!.id, cliqueId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+    }
+    
+    const cliqueWithMembers = await storage.getCliqueWithMembers(cliqueId);
+    res.json(cliqueWithMembers);
+  });
+
+  // Join clique
+  app.post("/api/cliques/:id/join", isAuthenticated, async (req, res) => {
+    const cliqueId = parseInt(req.params.id);
+    const clique = await storage.getClique(cliqueId);
+    
+    if (!clique) {
+      return res.status(404).json({ message: "Clique not found" });
+    }
+    
+    // Check if user is already a member
+    const isMember = await storage.isUserMemberOfClique(req.user!.id, cliqueId);
+    if (isMember) {
+      return res.status(400).json({ message: "Already a member" });
+    }
+    
+    try {
+      const data = insertCliqueMemberSchema.parse({
+        cliqueId,
+        userId: req.user!.id,
+        personaId: req.body.personaId || (await storage.getDefaultPersona(req.user!.id))?.id,
+        role: "member"
+      });
+      
+      const membership = await storage.addUserToClique(data);
+      res.status(201).json(membership);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // ======================= CHAIN ROUTES =======================
+  
+  // Create chain
+  app.post("/api/chains", isAuthenticated, async (req, res) => {
+    try {
+      // Check if user is member of the clique
+      const isMember = await storage.isUserMemberOfClique(req.user!.id, req.body.cliqueId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not a member of this clique" });
+      }
+      
+      const chainData = insertChainSchema.parse({
+        ...req.body,
+        creatorId: req.user!.id
+      });
+      
+      const chain = await storage.createChain(chainData);
+      
+      // Add initial content
+      if (req.body.initialContent) {
+        const contentData = insertChainContentSchema.parse({
+          chainId: chain.id,
+          userId: req.user!.id,
+          personaId: chainData.personaId,
+          content: req.body.initialContent.content,
+          contentType: req.body.initialContent.contentType,
+          mediaUrl: req.body.initialContent.mediaUrl,
+          position: 0
+        });
+        
+        await storage.addContentToChain(contentData);
+      }
+      
+      const chainWithContents = await storage.getChainWithContents(chain.id);
+      res.status(201).json(chainWithContents);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get user feed
+  app.get("/api/feed", isAuthenticated, async (req, res) => {
+    const feed = await storage.getFeedForUser(req.user!.id);
+    res.json(feed);
+  });
+
+  // Get chains for clique
+  app.get("/api/cliques/:id/chains", isAuthenticated, async (req, res) => {
+    const cliqueId = parseInt(req.params.id);
+    
+    // Check if user is member of the clique if it's private
+    const clique = await storage.getClique(cliqueId);
+    if (clique?.isPrivate) {
+      const isMember = await storage.isUserMemberOfClique(req.user!.id, cliqueId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not a member of this clique" });
+      }
+    }
+    
+    const chains = await storage.getChainsByCliqueId(cliqueId);
+    const chainsWithContents = await Promise.all(
+      chains.map(chain => storage.getChainWithContents(chain.id))
+    );
+    
+    res.json(chainsWithContents.filter(Boolean));
+  });
+
+  // Add content to chain
+  app.post("/api/chains/:id/content", isAuthenticated, async (req, res) => {
+    const chainId = parseInt(req.params.id);
+    const chain = await storage.getChain(chainId);
+    
+    if (!chain) {
+      return res.status(404).json({ message: "Chain not found" });
+    }
+    
+    // Check if user is member of the clique
+    const isMember = await storage.isUserMemberOfClique(req.user!.id, chain.cliqueId);
+    if (!isMember) {
+      return res.status(403).json({ message: "Not a member of this clique" });
+    }
+    
+    try {
+      // Get highest position
+      const contents = await storage.getChainContents(chainId);
+      const nextPosition = contents.length > 0 
+        ? Math.max(...contents.map(c => c.position)) + 1 
+        : 0;
+      
+      const contentData = insertChainContentSchema.parse({
+        ...req.body,
+        chainId,
+        userId: req.user!.id,
+        position: nextPosition
+      });
+      
+      const content = await storage.addContentToChain(contentData);
+      
+      // Add reputation if this is a continuation
+      if (nextPosition > 0) {
+        await storage.addReputation({
+          userId: req.user!.id,
+          badgeType: "contribution",
+          badgeName: "Chain Contributor",
+          cliqueId: chain.cliqueId,
+          level: 1
+        });
+      }
+      
+      const updatedChain = await storage.getChainWithContents(chainId);
+      res.status(201).json(updatedChain);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Get single chain with contents
+  app.get("/api/chains/:id", isAuthenticated, async (req, res) => {
+    const chainId = parseInt(req.params.id);
+    const chain = await storage.getChain(chainId);
+    
+    if (!chain) {
+      return res.status(404).json({ message: "Chain not found" });
+    }
+    
+    // Check if user is member of the clique if it's private
+    const clique = await storage.getClique(chain.cliqueId);
+    if (clique?.isPrivate) {
+      const isMember = await storage.isUserMemberOfClique(req.user!.id, chain.cliqueId);
+      if (!isMember) {
+        return res.status(403).json({ message: "Not a member of this clique" });
+      }
+    }
+    
+    const chainWithContents = await storage.getChainWithContents(chainId);
+    res.json(chainWithContents);
+  });
+
+  // ======================= REACTION ROUTES =======================
+  
+  // Add reaction
+  app.post("/api/content/:id/react", isAuthenticated, async (req, res) => {
+    const contentId = parseInt(req.params.id);
+    
+    try {
+      const data = insertReactionSchema.parse({
+        chainContentId: contentId,
+        userId: req.user!.id,
+        type: req.body.type
+      });
+      
+      const reaction = await storage.addReaction(data);
+      
+      // If the user hasn't reacted before, add reputation to the content creator
+      const contentReactions = await storage.getReactionsForContent(contentId);
+      const isFirstReaction = contentReactions.length === 1;
+      
+      if (isFirstReaction) {
+        // Get the content to find its creator
+        const contents = Array.from(storage.getChainContents(contentId));
+        const content = contents.find(c => c.id === contentId);
+        
+        if (content && content.userId !== req.user!.id) {
+          await storage.addReputation({
+            userId: content.userId,
+            badgeType: "engagement",
+            badgeName: "Content Appreciated",
+            level: 1
+          });
+        }
+      }
+      
+      res.status(201).json(reaction);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: error.errors });
+      }
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
+  // Remove reaction
+  app.delete("/api/content/:id/react", isAuthenticated, async (req, res) => {
+    const contentId = parseInt(req.params.id);
+    const success = await storage.removeReaction(req.user!.id, contentId);
+    
+    if (success) {
+      res.json({ message: "Reaction removed" });
+    } else {
+      res.status(404).json({ message: "Reaction not found" });
+    }
+  });
+
+  // ======================= REPUTATION ROUTES =======================
+  
+  // Get user reputations
+  app.get("/api/reputations", isAuthenticated, async (req, res) => {
+    const reputations = await storage.getUserReputations(req.user!.id);
+    res.json(reputations);
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

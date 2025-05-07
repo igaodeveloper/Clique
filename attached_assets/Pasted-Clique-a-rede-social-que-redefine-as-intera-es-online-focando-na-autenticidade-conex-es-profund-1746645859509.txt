@@ -1,0 +1,134 @@
+Clique é a rede social que redefine as interações online, focando na autenticidade, conexões profundas e colaboração contínua entre os usuários. A plataforma é composta por microcomunidades chamadas Cliques, onde os membros interagem por meio de Cadeias de Conteúdo e constroem sua reputação social por meio de memórias compartilhadas.
+
+O diferencial de Clique é a flexibilidade e personalização das interações, com a capacidade de criar personas modulares e narrativas dinâmicas, que tornam a experiência de cada usuário única e imersiva.
+
+Objetivos Principais
+Facilitar a interação íntima e genuína entre amigos, colegas e desconhecidos em grupos dinâmicos (Cliques).
+
+Colaborar de maneira contínua e criativa por meio de Cadeias de Conteúdo.
+
+Construir uma rede de interações com reputação e memórias vivas, criando um vínculo entre os usuários que vai além do simples feed de curtidas.
+
+Ser acessível e simples, sem complexidade técnica — ideal para todos os dispositivos, desde smartphones mais antigos até as últimas tecnologias.
+
+Funcionalidades do MVP
+1. Autenticação e Onboarding
+Login simplificado: E-mail, Google, ou telefone.
+
+Onboarding interativo: Guia o usuário a criar seu primeiro Clique e definir sua Persona inicial.
+
+2. Sistema de Cliques (Grupos)
+Criação de Cliques: Criação de grupos fechados com nome, descrição, imagem e permissões de acesso.
+
+Feed exclusivo por Clique: Cada Clique tem seu próprio feed interativo e personalizado.
+
+Permissões: Admin, Membro, Convidado — controle total sobre quem pode postar, visualizar e interagir.
+
+3. Cadeias de Conteúdo (Chains)
+Início de Cadeias: Usuários podem iniciar uma cadeia com conteúdo multimídia (texto, imagem, vídeo ou áudio).
+
+Continuação de Cadeias: Outros membros podem adicionar suas contribuições para continuar a cadeia.
+
+Encerramento de Cadeias: O autor pode fechar a cadeia quando achar que foi suficientemente colaborada.
+
+Visualização: Layout estilo timeline, onde cada novo conteúdo se encaixa perfeitamente na sequência.
+
+4. Personas Modulares
+Criação de Personas: O usuário pode criar várias personas, cada uma com nome, foto e estilo visual próprio.
+
+Troca de Persona: O usuário pode alternar entre personas a qualquer momento, com o conteúdo sendo apresentado de acordo com a persona ativa.
+
+Vinculação de Persona a Cliques: Cada persona pode ser vinculada a um Clique específico, permitindo personalização total.
+
+5. Reputação e Memórias
+Selos de Reputação: Sistema de gamificação onde o usuário ganha selos de acordo com suas interações, como "Conector", "Criador de Memórias", "Historiador", etc.
+
+Linha do Tempo de Memórias: Cada Clique possui uma linha do tempo visível para todos os membros, mostrando o histórico de contribuições e interações.
+
+XP e Níveis: O usuário acumula pontos (XP) conforme interage nas Cadeias e em outros Cliques, evoluindo sua reputação.
+
+6. Notificações Personalizadas
+Notificações por Clique e Cadeia: Notifique apenas sobre interações relevantes para o usuário, sem sobrecarregar com alertas desnecessários.
+
+Controle de notificação: O usuário pode gerenciar quais interações e quais Cliques desejam ser notificados.
+
+Identidade Visual
+Logo e Marca
+Nome do Projeto: Clique
+
+Slogan: "Conecte. Construa. Marque história."
+
+Conceito Visual do Logo:
+
+Três círculos entrelaçados, representando:
+
+Clique (microcomunidade)
+
+Chain (cadeia de conteúdo)
+
+Conexão pessoal (persona)
+
+Estilo: Geométrico e fluído, sugerindo movimento e crescimento contínuo.
+
+Cores: Azul vibrante (conexão), Verde Fluído (ação), Púrpura Radiante (memórias), com opções de fundo claro e escuro (Dark Mode).
+
+Tipografia: Inter Bold (moderna e legível), com um toque minimalista.
+
+Paleta de Cores:
+Cor	Código	Função
+Azul Vibrante	#3D5AFE	Base (Conexão, Confiança)
+Verde Fluído	#00C853	Ação (Criação, Participação)
+Púrpura Radiante	#AA00FF	Destaque (Memórias, Reputação)
+Cinza Aconchegante	#F5F5F5	Fundo Claro
+Cinza Noturno	#1E1E1E	Fundo Escuro (Dark Mode)
+
+Tipografia:
+Primária: Inter (Moderna, Legível) — font-family: 'Inter', sans-serif;
+
+Alternativa (para branding): Sora (Geométrica, Friendly)
+
+Wireframe e Design
+Estrutura da Interface:
+Tela inicial (Home)
+
+Banner com o logo e slogan.
+
+Botões rápidos: Criar Clique, Entrar em Clique, Navegar Cadeias.
+
+Feed dinâmico dos Cliques e Chains mais recentes.
+
+Tela de Clique
+
+Visão geral do Clique: imagem, descrição, membros e feed exclusivo.
+
+Botão para criar uma nova Cadeia.
+
+Histórico de interações e Chains.
+
+Tela de Cadeia (Chain)
+
+Visualização estilo linha do tempo, onde o conteúdo é encadeado.
+
+Opções para comentar, adicionar e fechar a Cadeia.
+
+Tela de Perfil/Persona
+
+Exibição da Persona ativa, foto, bio e interações.
+
+Seletor de Persona, mostrando todas as opções criadas.
+
+Tela de Reputação
+
+Linha do tempo das interações do usuário, mostrando seu histórico e Selos ganhos.
+
+Indicadores de XP e evolução de nível.
+
+Tecnologias Sugeridas
+Frontend:
+React + TypeScript (para modularidade e escalabilidade)
+
+TailwindCSS (design rápido e responsivo)
+
+Zustand ou React Query (gerenciamento de estado eficiente)
+
+Framer Motion (animações suaves)
