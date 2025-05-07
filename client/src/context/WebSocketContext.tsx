@@ -45,6 +45,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
   // Connect to WebSocket when user is authenticated
   useEffect(() => {
+    let newSocket: WebSocket | null = null;
+    
     if (!user) {
       // Close existing socket if user logs out
       if (socket) {
@@ -56,53 +58,62 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     }
 
     // Create WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
-    console.log('Connecting to WebSocket URL:', wsUrl);
-    const newSocket = new WebSocket(wsUrl);
-
-    // Handle WebSocket events
-    newSocket.onopen = () => {
-      console.log('WebSocket connected');
-      // Authenticate connection
-      newSocket.send(JSON.stringify({
-        type: 'authenticate',
-        userId: user.id
-      }));
-    };
-
-    newSocket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        handleWebSocketMessage(data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
-
-    newSocket.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws`;
+      console.log('Connecting to WebSocket URL:', wsUrl);
       
-      // Attempt to reconnect after a delay
-      setTimeout(() => {
-        if (user) {
-          console.log('Attempting to reconnect WebSocket...');
-          // The effect will run again and reconnect
+      newSocket = new WebSocket(wsUrl);
+
+      newSocket.onopen = () => {
+        console.log('WebSocket connected');
+        if (user && newSocket) {
+          // Authenticate connection
+          newSocket.send(JSON.stringify({
+            type: 'authenticate',
+            userId: user.id
+          }));
         }
-      }, 3000);
-    };
+      };
 
-    newSocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      newSocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-    setSocket(newSocket);
+      newSocket.onclose = () => {
+        console.log('WebSocket disconnected');
+        setIsConnected(false);
+        
+        // Attempt to reconnect after a delay
+        setTimeout(() => {
+          if (user) {
+            console.log('Attempting to reconnect WebSocket...');
+            // The effect will run again and reconnect
+          }
+        }, 3000);
+      };
+
+      newSocket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+
+      setSocket(newSocket);
+    } catch (error) {
+      console.error('Error creating WebSocket connection:', error);
+      setIsConnected(false);
+    }
 
     // Cleanup on unmount
     return () => {
-      newSocket.close();
+      if (newSocket) {
+        newSocket.close();
+      }
     };
   }, [user]);
 
