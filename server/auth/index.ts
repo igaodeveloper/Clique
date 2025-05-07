@@ -4,14 +4,15 @@ import { configurePassport, isAuthenticated, isAdmin } from './passport';
 import authRouter from './routes';
 import { cookies } from '../utils/cookies';
 import { storage } from '../storage';
+import { createSessionStore } from './sessionStore';
 
 /**
  * Configura todo o sistema de autenticação
  */
-export function setupAuth(app: Express): void {
-  // Usar store de sessão do DatabaseStorage
-  const sessionStore = storage.sessionStore;
-
+export async function setupAuth(app: Express): Promise<void> {
+  // Criar session store de maneira adequada
+  const sessionStore = await createSessionStore();
+  
   // Configurar sessão
   app.use(
     session({

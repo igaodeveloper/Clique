@@ -191,3 +191,27 @@ export async function getCurrentUser(req: Request, res: Response) {
     createdAt: user.createdAt
   });
 }
+
+/**
+ * Verifica se o usuário tem uma sessão válida
+ */
+export function verifySession(req: Request, res: Response) {
+  console.log('Verificando sessão');
+  console.log('Session:', req.session);
+  console.log('Auth check:', {
+    isAuthenticated: req.isAuthenticated(),
+    hasUser: !!req.user,
+    hasSession: !!req.session,
+    sessionID: req.sessionID,
+    cookies: req.headers.cookie
+  });
+  
+  const isValid = req.isAuthenticated() && !!req.user;
+  
+  res.json({
+    valid: isValid,
+    authenticated: req.isAuthenticated(),
+    hasUser: !!req.user,
+    sessionID: req.sessionID
+  });
+}

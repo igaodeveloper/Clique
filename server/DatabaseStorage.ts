@@ -17,24 +17,10 @@ import session from 'express-session';
 import { createSessionStore } from './auth/sessionStore';
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.Store;
-
-  constructor() {
-    // Inicialização temporária do sessionStore
-    // Será substituído logo em seguida pelo createSessionStore()
-    this.sessionStore = {} as session.Store;
-    
-    // Criar store de sessão com PostgreSQL de forma assíncrona
-    this.initSessionStore();
-  }
+  // Implementação sem sessionStore, pois agora ele é criado diretamente no auth/index.ts
   
-  private async initSessionStore() {
-    try {
-      this.sessionStore = await createSessionStore();
-      console.log("Session store inicializado com sucesso");
-    } catch (error) {
-      console.error("Erro ao inicializar session store:", error);
-    }
+  constructor() {
+    // Nada a inicializar
   }
   
   // USER OPERATIONS

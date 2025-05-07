@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, logout, getCurrentUser } from './controllers';
+import { register, login, logout, getCurrentUser, verifySession } from './controllers';
 import { isAuthenticated } from './passport';
 
 const authRouter = Router();
@@ -16,4 +16,7 @@ authRouter.post('/logout', logout);
 // Rota para obter usuário atual
 authRouter.get('/me', isAuthenticated, getCurrentUser);
 
-export default authRouter;
+// Rota para verificar sessão
+authRouter.get('/verify', verifySession);
+
+export default authRouter;;

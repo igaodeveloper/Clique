@@ -17,7 +17,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Configurar autenticação
-  setupAuth(app);
+  await setupAuth(app);
 
   // Middleware de log para requisições
   app.use((req: Request, _res: Response, next: NextFunction) => {
